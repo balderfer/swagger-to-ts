@@ -23,6 +23,11 @@ export const PRIMITIVES: { [key: string]: "boolean" | "string" | "number" } = {
   number: "number",
 };
 
+const ALIASES: { [key: string]: "string" } = {
+  UTCDateTime: "string",
+  UTCDate: "string",
+};
+
 export default function generateTypesV3(
   schema: OpenAPI3,
   options?: SwaggerToTSOptions
@@ -46,6 +51,8 @@ export default function generateTypesV3(
       }
       case "string":
       case "number":
+      case "UTCDateTime":
+      case "UTCDate":
       case "boolean": {
         return nodeType(node) || "any";
       }
@@ -106,7 +113,8 @@ export default function generateTypesV3(
 
   function createKeys(
     obj: { [key: string]: any },
-    required?: string[]
+    required?: string[],
+    isInterface?: boolean
   ): string {
     let output = "";
 
@@ -117,7 +125,7 @@ export default function generateTypesV3(
       }
 
       // 2. name (with “?” if optional property)
-      output += `"${key}"${!required || !required.includes(key) ? "?" : ""}: `;
+      output += `${isInterface ? "export interface " : "\""}${key}${isInterface ? "" : "\""}${!required || !required.includes(key) ? "?" : ""}${isInterface ? "" : ":"} `;
 
       // 3. open nullable
       if (value.nullable) {
@@ -139,22 +147,26 @@ export default function generateTypesV3(
     return output;
   }
 
-  const schemas = `schemas: {
-    ${createKeys(propertyMapped, Object.keys(propertyMapped))}
-  }`;
+  const schemas = `
+    ${createKeys(propertyMapped, Object.keys(propertyMapped), true)}
+  `;
 
-  const responses = !schema.components.responses
-    ? ``
-    : `responses: {
-    ${createKeys(
-      schema.components.responses,
-      Object.keys(schema.components.responses)
-    )}
-  }`;
+  // const responses = !schema.components.responses
+  //   ? ``
+  //   : `responses: {
+  //   ${createKeys(
+  //     schema.components.responses,
+  //     Object.keys(schema.components.responses)
+  //   )}
+  // }`;
+
+  const aliases = Object.entries(ALIASES).map(([key, value]) => {
+    return `export type ${key} = ${value};`;
+  }).join('\n');
 
   // note: make sure that base-level schemas are required
-  return `export interface components {
+  return `
+    ${aliases}
     ${schemas}
-    ${responses}
-  }`;
+  `;
 }

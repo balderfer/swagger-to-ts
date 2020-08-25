@@ -22,7 +22,9 @@ type SchemaObjectType =
   | "object"
   | "oneOf"
   | "ref"
-  | "string";
+  | "string"
+  | "UTCDate"
+  | "UTCDateTime";
 export function nodeType(obj: any): SchemaObjectType | undefined {
   if (!obj || typeof obj !== "object") {
     return undefined;
@@ -43,11 +45,9 @@ export function nodeType(obj: any): SchemaObjectType | undefined {
   }
 
   // string
-  if (
-    ["binary", "byte", "date", "dateTime", "password", "string"].includes(
-      obj.type
-    )
-  ) {
+  if (["binary", "byte", "date", "dateTime", "password", "string"].includes(obj.type)) {
+    if (obj.format === "date-time") return "UTCDateTime";
+    if (obj.format === "date") return "UTCDate";
     return "string";
   }
 
@@ -97,6 +97,9 @@ export function swaggerVersion(definition: OpenAPI2 | OpenAPI3): 2 | 3 {
 /** Convert $ref to TS ref */
 export function transformRef(ref: string): string {
   const parts = ref.replace(/^#\//, "").split("/");
+  if (parts.length === 3 && parts[0] === "components" && parts[1] === "schemas") {
+    return parts[2];
+  }
   return `${parts[0]}["${parts.slice(1).join('"]["')}"]`;
 }
 
@@ -112,7 +115,7 @@ export function tsTupleOf(types: string[]): string {
 
 /** Convert T, U into T & U; */
 export function tsIntersectionOf(types: string[]): string {
-  return `(${types.join(") & (")})`;
+  return types.length === 1 ? types[0] : `(${types.join(") & (")})`;
 }
 
 /** Convert T into Partial<T> */
