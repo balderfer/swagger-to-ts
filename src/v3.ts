@@ -117,8 +117,8 @@ export default function generateTypesV3(
     isInterface?: boolean
   ): string {
     let output = "";
-
-    Object.entries(obj).forEach(([key, value]) => {
+    const sortedEntries = Object.entries(obj).sort((a, b) => a[0] < b[0] ? -1 : 1)
+    sortedEntries.forEach(([key, value]) => {
       // 1. JSDoc comment (goes above property)
       if (value.description) {
         output += comment(value.description);
